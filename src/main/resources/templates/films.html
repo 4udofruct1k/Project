@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список фильмов — Films</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; color: #222; }
+        h1 { color: #222; margin-bottom: 8px; }
+        .controls, .report { margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        input[type="text"], input[type="number"], select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 7px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button.secondary { background: #6c757d; }
+        button.danger { background: #dc3545; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th, td { padding: 10px; border-bottom: 1px solid #e9ecef; text-align: left; vertical-align: top; }
+        th { background: #343a40; color: white; font-weight: 600; }
+        tr:hover { background: #f1f1f1; }
+        .small { font-size: 0.9em; color: #555; }
+        .status { margin-left: 8px; font-size: 0.95em; color: #333; }
+        .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+        .muted { color: #666; font-size: 0.9em; }
+        .center { text-align: center; }
+    </style>
+</head>
+<body>
+
+<h1>Фильмы</h1>
+
+<!-- Блок поиска и загрузки -->
+<div class="controls">
+    <input id="keyword" type="text" placeholder="Ключевое слово для Kinopoisk (load)" style="min-width:220px;">
+    <button id="btnLoad">Загрузить из Kinopoisk</button>
+
+    <span class="muted">или</span>
+
+    <input id="filmName" type="text" placeholder="Название (search)">
+    <input id="year" type="number" placeholder="Год" style="width:100px;">
+    <input id="minRating" type="number" step="0.1" placeholder="Мин. рейтинг" style="width:120px;">
+    <input id="maxRating" type="number" step="0.1" placeholder="Макс. рейтинг" style="width:120px;">
+
+    <select id="sortBy">
+        <option value="id">Сортировать по: ID</option>
+        <option value="filmName">Название</option>
+        <option value="year">Год</option>
+        <option value="rating">Рейтинг</option>
+    </select>
+    <select id="direction">
+        <option value="asc">По возрастанию</option>
+        <option value="desc">По убыванию</option>
+    </select>
+
+    <button id="btnSearch">Найти</button>
+
+    <div class="right">
+        <span class="small">Страница</span>
+        <input id="page" type="number" min="0" value="0" style="width:60px;">
+        <span class="small">Размер</span>
+        <input id="size" type="number" min="1" value="10" style="width:60px;">
+        <button id="btnClear" class="danger">🗑 Очистить БД</button>
+    </div>
+</div>
+
+<!-- Статус -->
+<div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+    <div id="status" class="muted">Готово.</div>
+</div>
+
+<!-- Таблица результатов -->
+<table id="filmsTable">
+    <thead>
+    <tr>
+        <th style="width:60px;">ID</th>
+        <th>Название</th>
+        <th style="width:80px;">Год</th>
+        <th style="width:100px;">Рейтинг</th>
+        <th>Описание</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- Заполняется JS -->
+    </tbody>
+</table>
+
+<!-- Пагинация простая -->
+<div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+    <button id="prevPage" class="secondary">← Назад</button>
+    <button id="nextPage" class="secondary">Вперед →</button>
+    <div class="muted">Текущая страница: <span id="currentPage">0</span></div>
+    <div style="margin-left:auto;">
+        <button id="refresh" class="secondary">Обновить</button>
+    </div>
+</div>
+
+<hr style="margin:18px 0;">
+
+<!-- Отправка отчёта -->
+<div class="report">
+    <input id="reportEmail" type="text" placeholder="Email для отчёта (например: you@example.com)" style="min-width:260px;">
+    <select id="reportFormat">
+        <option value="csv">CSV</option>
+        <option value="xml">XML</option>
+    </select>
+    <button id="sendReport">Отправить отчёт на email</button>
+    <div id="reportStatus" class="status"></div>
+</div>
+
+<script>
+    const statusEl = document.getElementById('status');
+    const reportStatusEl = document.getElementById('reportStatus');
+    const tbody = document.querySelector('#filmsTable tbody');
+
+    function setStatus(text) { statusEl.textContent = text; }
+    function setReportStatus(text) { reportStatusEl.textContent = text; }
+
+    function getSearchParams() {
+        const params = new URLSearchParams();
+        const filmName = document.getElementById('filmName').value.trim();
+        const year = document.getElementById('year').value;
+        const minRating = document.getElementById('minRating').value;
+        const maxRating = document.getElementById('maxRating').value;
+        const sortBy = document.getElementById('sortBy').value;
+        const direction = document.getElementById('direction').value;
+        const page = document.getElementById('page').value || 0;
+        const size = document.getElementById('size').value || 10;
+
+        if (filmName) params.append('filmName', filmName);
+        if (year) params.append('year', year);
+        if (minRating) params.append('minRating', minRating);
+        if (maxRating) params.append('maxRating', maxRating);
+        params.append('page', page);
+        params.append('size', size);
+        params.append('sortBy', sortBy);
+        params.append('direction', direction);
+
+        return params;
+    }
+
+    function renderTable(films) {
+        tbody.innerHTML = '';
+        if (!films || films.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="center">Фильмы не найдены</td></tr>';
+            return;
+        }
+        films.forEach(f => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${f.id ?? ''}</td>
+                <td>${f.filmName ?? ''}</td>
+                <td>${f.year ?? ''}</td>
+                <td>${f.rating ?? ''}</td>
+                <td>${(f.description ?? '').substring(0, 300)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function loadSearch() {
+        setStatus('Загрузка данных...');
+        try {
+            const params = getSearchParams();
+            const resp = await fetch('/api/v2/films?' + params.toString());
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            renderTable(data.content);
+            document.getElementById('currentPage').textContent = data.number;
+            setStatus(`Загружено: ${data.numberOfElements} элементов (всего: ${data.totalElements}).`);
+        } catch (e) {
+            console.error(e);
+            setStatus('Ошибка загрузки: ' + e.message);
+            renderTable([]);
+        }
+    }
+
+    async function loadFromKinopoisk() {
+        const keyword = document.getElementById('keyword').value.trim();
+        if (!keyword) { setStatus('Введите keyword для загрузки'); return; }
+        setStatus('Вызов Kinopoisk API...');
+        document.getElementById('btnLoad').disabled = true;
+        try {
+            const resp = await fetch(`/api/v2/films/load?keyword=${encodeURIComponent(keyword)}&page=1`);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            setStatus(`Kinopoisk: найдено ${data.total} (страниц: ${data.totalPages}). Новые добавлены.`);
+            await loadSearch();
+        } catch (e) {
+            console.error(e);
+            setStatus('Ошибка при загрузке из Kinopoisk: ' + e.message);
+        } finally {
+            document.getElementById('btnLoad').disabled = false;
+        }
+    }
+
+    async function sendReport() {
+        const email = document.getElementById('reportEmail').value.trim();
+        const format = document.getElementById('reportFormat').value;
+        if (!email) { setReportStatus('Введите email.'); return; }
+        setReportStatus('Отправка отчёта...');
+        document.getElementById('sendReport').disabled = true;
+        try {
+            const resp = await fetch(`/api/v2/films/report?email=${encodeURIComponent(email)}&format=${encodeURIComponent(format)}`);
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error('HTTP ' + resp.status + ' — ' + text);
+            }
+            const text = await resp.text();
+            setReportStatus('OK: ' + text);
+        } catch (e) {
+            console.error(e);
+            setReportStatus('Ошибка отправки: ' + e.message);
+        } finally {
+            document.getElementById('sendReport').disabled = false;
+        }
+    }
+
+    async function clearDatabase() {
+        if (!confirm('⚠️ Вы уверены, что хотите удалить ВСЕ фильмы из базы?')) return;
+        setStatus('Очистка базы...');
+        document.getElementById('btnClear').disabled = true;
+        try {
+            const resp = await fetch('/api/v2/films/clear?confirm=true', { method: 'DELETE' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const text = await resp.text();
+            setStatus('✅ ' + text);
+            await loadSearch();
+        } catch (e) {
+            console.error(e);
+            setStatus('Ошибка очистки: ' + e.message);
+        } finally {
+            document.getElementById('btnClear').disabled = false;
+        }
+    }
+
+    document.getElementById('prevPage').addEventListener('click', () => {
+        const pageEl = document.getElementById('page');
+        let val = parseInt(pageEl.value || '0', 10);
+        if (val > 0) pageEl.value = val - 1;
+        loadSearch();
+    });
+    document.getElementById('nextPage').addEventListener('click', () => {
+        const pageEl = document.getElementById('page');
+        let val = parseInt(pageEl.value || '0', 10);
+        pageEl.value = val + 1;
+        loadSearch();
+    });
+
+    document.getElementById('btnSearch').addEventListener('click', () => { document.getElementById('page').value = 0; loadSearch(); });
+    document.getElementById('refresh').addEventListener('click', () => loadSearch());
+    document.getElementById('btnLoad').addEventListener('click', () => loadFromKinopoisk());
+    document.getElementById('sendReport').addEventListener('click', () => sendReport());
+    document.getElementById('btnClear').addEventListener('click', () => clearDatabase());
+
+    window.addEventListener('load', () => loadSearch());
+</script>
+
+</body>
+</html>
