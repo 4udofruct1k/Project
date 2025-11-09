@@ -19,25 +19,17 @@ public class ReportController {
     private final ReportService reportService;
     private final EmailService emailService;
 
-    /**
-     * Отправляет отчёт на email в формате CSV или XML
-     * Пример запроса:
-     * GET /api/v2/reports/send?email=test@example.com&format=csv
-     */
     @GetMapping("/send")
     public ResponseEntity<String> sendReport(
             @RequestParam String email,
             @RequestParam(defaultValue = "csv") String format
     ) {
-        // 1. Получаем все фильмы
         List<Film> films = filmService.getAllFilms();
 
-        // 2. Генерируем отчёт в нужном формате
         byte[] report = "xml".equalsIgnoreCase(format)
                 ? reportService.generateXml(films)
                 : reportService.generateCsv(films);
 
-        // 3. Отправляем письмо
         emailService.sendReport(
                 email,
                 "Отчёт по фильмам",

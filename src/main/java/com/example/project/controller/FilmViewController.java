@@ -9,7 +9,6 @@ public class FilmViewController {
 
     @GetMapping("/films")
     public String showFilmsPage() {
-        // Просто возвращаем HTML-шаблон, данные он получит через AJAX
         return "films";
     }
 }

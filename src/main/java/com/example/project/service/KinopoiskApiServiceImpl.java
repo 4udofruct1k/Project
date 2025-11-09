@@ -2,7 +2,6 @@ package com.example.project.service;
 
 import com.example.project.model.dto.FilmDetailsDto;
 import com.example.project.model.dto.KinopoiskResponse;
-import com.example.project.service.KinopoiskApiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

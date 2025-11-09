@@ -43,7 +43,6 @@ public class WebClientConfig {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader("X-API-KEY", apiKey)
                 .defaultHeader("Content-Type", "application/json")
-                // Простой логгер запросов/ответов
                 .filter(logRequest())
                 .build();
     }

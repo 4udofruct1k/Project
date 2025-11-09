@@ -2,7 +2,6 @@ package com.example.project.controller;
 
 import com.example.project.model.dto.KinopoiskResponse;
 import com.example.project.model.entity.Film;
-import com.example.project.repository.FilmRepository;
 import com.example.project.service.EmailService;
 import com.example.project.service.FilmService;
 import com.example.project.service.KinopoiskApiService;

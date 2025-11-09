@@ -4,7 +4,6 @@ import com.example.project.model.dto.FilmDetailsDto;
 import com.example.project.model.dto.FilmDto;
 import com.example.project.model.entity.Film;
 import com.example.project.repository.FilmRepository;
-import com.example.project.service.FilmService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;

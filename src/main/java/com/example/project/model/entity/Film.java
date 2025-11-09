@@ -14,10 +14,10 @@ public class Film {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // внутренний ID в базе данных
+    private Long id;
 
     @Column(name = "film_id", unique = true, nullable = false)
-    private Long filmId; // ID фильма из Кинопоиска
+    private Long filmId;
 
     @Column(name = "film_name")
     private String filmName;
