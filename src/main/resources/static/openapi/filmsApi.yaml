@@ -1,0 +1,228 @@
+openapi: 3.0.3
+info:
+  title: Film Management API
+  version: 1.0.0
+  description: >
+    REST API для работы с фильмами.  
+    Позволяет искать фильмы, загружать их с Kinopoisk, генерировать отчёты и очищать базу.
+
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер разработки
+
+paths:
+  /api/v2/films/load:
+    get:
+      summary: Загрузить фильмы с Kinopoisk API
+      description: >
+        Загружает список фильмов по ключевому слову с Kinopoisk API  
+        и сохраняет новые фильмы в базу данных.
+      parameters:
+        - name: keyword
+          in: query
+          description: Ключевое слово для поиска фильмов
+          required: true
+          schema:
+            type: string
+            example: "Interstellar"
+        - name: page
+          in: query
+          description: Номер страницы для запроса к Kinopoisk API
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Фильмы успешно загружены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KinopoiskResponse'
+        '400':
+          description: Некорректные параметры запроса
+        '500':
+          description: Ошибка при обращении к Kinopoisk API
+
+  /api/v2/films:
+    get:
+      summary: Поиск фильмов
+      description: >
+        Возвращает страницу с фильмами, используя фильтры по названию, году и рейтингу.  
+        Поддерживает пагинацию и сортировку.
+      parameters:
+        - name: filmName
+          in: query
+          description: Название фильма (поиск по подстроке)
+          required: false
+          schema:
+            type: string
+            example: "Inception"
+        - name: year
+          in: query
+          description: Год выпуска фильма
+          required: false
+          schema:
+            type: integer
+            example: 2014
+        - name: minRating
+          in: query
+          description: Минимальный рейтинг фильма
+          required: false
+          schema:
+            type: number
+            format: double
+            example: 7.0
+        - name: maxRating
+          in: query
+          description: Максимальный рейтинг фильма
+          required: false
+          schema:
+            type: number
+            format: double
+            example: 9.0
+        - name: page
+          in: query
+          description: Номер страницы
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          description: Количество фильмов на странице
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: sortBy
+          in: query
+          description: Поле для сортировки
+          required: false
+          schema:
+            type: string
+            default: id
+        - name: direction
+          in: query
+          description: Направление сортировки
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Успешный ответ со страницей фильмов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageFilm'
+        '400':
+          description: Некорректные параметры фильтрации
+        '500':
+          description: Ошибка сервера
+
+  /api/v2/films/report:
+    get:
+      summary: Отправить отчёт по фильмам на email
+      description: >
+        Генерирует отчёт по всем фильмам в формате CSV или XML  
+        и отправляет его на указанный адрес электронной почты.
+      parameters:
+        - name: email
+          in: query
+          description: Адрес электронной почты получателя
+          required: true
+          schema:
+            type: string
+            example: "user@example.com"
+        - name: format
+          in: query
+          description: Формат отчёта (CSV или XML)
+          required: false
+          schema:
+            type: string
+            enum: [csv, xml]
+            default: csv
+      responses:
+        '200':
+          description: Отчёт успешно отправлен
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Отчёт отправлен на user@example.com"
+        '400':
+          description: Некорректный email или формат
+        '500':
+          description: Ошибка при генерации или отправке отчёта
+
+  /api/v2/films/clear:
+    delete:
+      summary: Очистить базу фильмов
+      description: >
+        Удаляет все записи фильмов из базы данных.
+      responses:
+        '200':
+          description: База фильмов очищена успешно
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "База фильмов очищена успешно!"
+        '500':
+          description: Ошибка при удалении данных
+
+components:
+  schemas:
+    Film:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        filmId:
+          type: integer
+          example: 301
+        filmName:
+          type: string
+          example: "Inception"
+        year:
+          type: integer
+          example: 2010
+        rating:
+          type: number
+          format: double
+          example: 8.8
+
+    KinopoiskResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 20
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Film'
+
+    PageFilm:
+      type: object
+      description: Обёртка для постраничного вывода фильмов
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Film'
+        totalElements:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 10
+        number:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 10

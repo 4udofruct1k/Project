@@ -8,6 +8,8 @@ import lombok.Data;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class FilmDto {
 
+
+
     @JsonProperty("kinopoiskId")
     private Long filmId;
 
@@ -22,4 +24,6 @@ public class FilmDto {
 
     @JsonProperty("description")
     private String description;
+
+
 }

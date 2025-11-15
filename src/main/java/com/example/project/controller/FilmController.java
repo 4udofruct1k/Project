@@ -29,7 +29,7 @@ public class FilmController {
             @RequestParam(defaultValue = "1") int page
     ) {
         KinopoiskResponse response = kinopoiskApiService.searchFilms(keyword, page);
-        filmService.saveNewFilms(response.getItems()); // сохраняем только новые
+        filmService.saveNewFilms(response.getItems());
         return ResponseEntity.ok(response);
     }
 

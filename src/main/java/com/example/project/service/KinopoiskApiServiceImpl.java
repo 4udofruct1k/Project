@@ -1,6 +1,6 @@
 package com.example.project.service;
 
-import com.example.project.model.dto.FilmDetailsDto;
+import com.example.project.model.dto.FilmDto;
 import com.example.project.model.dto.KinopoiskResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,12 +16,12 @@ public class KinopoiskApiServiceImpl implements KinopoiskApiService {
     private final WebClient webClientWithTimeout;
 
     @Override
-    public FilmDetailsDto getFilmDetails(Long filmId) {
+    public FilmDto getFilmDetails(Long filmId) {
         try {
             return webClientWithTimeout.get()
                     .uri("/{id}", filmId)
                     .retrieve()
-                    .bodyToMono(FilmDetailsDto.class)
+                    .bodyToMono(FilmDto.class)
                     .block();
         } catch (WebClientResponseException e) {
             log.error("Ошибка при получении деталей фильма {}: {} {}", filmId, e.getStatusCode(), e.getResponseBodyAsString());
@@ -29,6 +29,25 @@ public class KinopoiskApiServiceImpl implements KinopoiskApiService {
         } catch (Exception e) {
             log.error("Неизвестная ошибка при получении деталей фильма {}", filmId, e);
             throw new RuntimeException("Ошибка при получении данных фильма", e);
+        }
+    }
+
+    @Override
+    public KinopoiskResponse searchFilmsByGenre(String genre, int page) {
+        try {
+            return webClientWithTimeout.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/v1/movie")
+                            .queryParam("genres.name", genre)
+                            .queryParam("page", page)
+                            .build())
+                    .header("X-API-KEY", "<ваш API ключ>") // ключ из пропертей или @Value
+                    .retrieve()
+                    .bodyToMono(KinopoiskResponse.class)
+                    .block();
+        } catch (Exception e) {
+            log.error("Ошибка при получении фильмов по жанру {}", genre, e);
+            throw new RuntimeException("Ошибка при получении данных", e);
         }
     }
 
